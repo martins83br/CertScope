@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CertScope History</title>
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<main class="shell">
+
+<header class="hero">
+
+    <div class="brand">
+        <div class="logo">CS</div>
+
+        <div>
+            <h1>CertScope</h1>
+            <p>TLS & Certificate Intelligence Platform</p>
+        </div>
+    </div>
+
+    <nav class="top-nav">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/">Scanner</a>
+        <a href="/history" class="active">History</a>
+        <a href="/compare">Compare</a>
+    </nav>
+
+</header>
+
+<section class="page-heading">
+
+    <span class="eyebrow">CERTIFICATE INTELLIGENCE</span>
+
+    <h2>Scan History</h2>
+
+    <p>
+        Review previously recorded certificate and TLS snapshots.
+    </p>
+
+</section>
+
+<section class="panel wide">
+
+    <div class="panel-title">
+        <span>Recorded Snapshots</span>
+        <span>{{ records|length }} scan(s)</span>
+    </div>
+
+    {% if records %}
+
+    <div class="history-list">
+
+        {% for record in records %}
+
+        <a
+            href="/history/{{ record.id }}"
+            class="history-row"
+        >
+
+            <div class="history-target">
+                <strong>
+                    {{ record.data.target }}
+                </strong>
+
+                <span>
+                    {{ record.data.scanned_at }}
+                </span>
+            </div>
+
+            <div class="history-score">
+                <span>
+                    {{ record.data.assessment.score }}/100
+                </span>
+
+                <strong>
+                    {{ record.data.assessment.grade }}
+                </strong>
+            </div>
+
+            <div class="history-cert">
+                <span>Expires</span>
+
+                <strong>
+                    {{ record.data.certificate.days_remaining }} days
+                </strong>
+            </div>
+
+            <div class="history-arrow">
+                →
+            </div>
+
+        </a>
+
+        {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div class="empty-state">
+        No CertScope scans have been recorded yet.
+    </div>
+
+    {% endif %}
+
+</section>
+
+</main>
+
+</body>
+</html>

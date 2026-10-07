@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {{ target }} — CertScope
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<main class="shell">
+
+<header class="hero">
+
+    <div class="brand">
+
+        <div class="logo">
+            CS
+        </div>
+
+        <div>
+            <h1>
+                CertScope
+            </h1>
+
+            <p>
+                TLS & Certificate Intelligence Platform
+            </p>
+        </div>
+
+    </div>
+
+    <nav class="top-nav">
+
+        <a href="/dashboard">
+            Dashboard
+        </a>
+
+        <a href="/">
+            Scanner
+        </a>
+
+        <a href="/history">
+            History
+        </a>
+
+        <a href="/compare">
+            Compare
+        </a>
+
+    </nav>
+
+</header>
+
+
+<section class="page-heading">
+
+    <span class="eyebrow">
+        TARGET INTELLIGENCE
+    </span>
+
+    <h2>
+        {{ target }}
+    </h2>
+
+    <p>
+        Consolidated certificate intelligence
+        from locally recorded observations.
+    </p>
+
+</section>
+
+
+{% if asset %}
+
+<section class="dashboard-metrics target-metrics">
+
+    <article class="dashboard-metric">
+
+        <span>
+            Operational Status
+        </span>
+
+        <strong
+            class="status-text-{{ asset.status.name|lower }}"
+        >
+            {{ asset.status.label }}
+        </strong>
+
+    </article>
+
+    <article class="dashboard-metric">
+
+        <span>
+            Latest Score
+        </span>
+
+        <strong>
+            {{ asset.score if asset.score is not none else "—" }}
+        </strong>
+
+    </article>
+
+    <article class="dashboard-metric">
+
+        <span>
+            Grade
+        </span>
+
+        <strong>
+            {{ asset.grade or "—" }}
+        </strong>
+
+    </article>
+
+    <article class="dashboard-metric">
+
+        <span>
+            Days Remaining
+        </span>
+
+        <strong>
+            {{ asset.days_remaining if asset.days_remaining is not none else "—" }}
+        </strong>
+
+    </article>
+
+</section>
+
+
+<section class="panel wide">
+
+    <div class="panel-title">
+
+        <span>
+            Current Intelligence
+        </span>
+
+        <span
+            class="asset-status
+            status-{{ asset.status.name|lower }}"
+        >
+            {{ asset.status.label }}
+        </span>
+
+    </div>
+
+    <div class="target-summary-grid">
+
+        <div>
+            <span>
+                Issuer
+            </span>
+
+            <strong>
+                {{ asset.issuer or "Unknown" }}
+            </strong>
+        </div>
+
+        <div>
+            <span>
+                Latest Change
+            </span>
+
+            <strong>
+                {{ asset.change_summary }}
+            </strong>
+        </div>
+
+        <div>
+            <span>
+                Last Scan
+            </span>
+
+            <strong>
+                {{ asset.scanned_at or "Never" }}
+            </strong>
+        </div>
+
+        <div>
+            <span>
+                Status Reason
+            </span>
+
+            <strong>
+                {{ asset.status.reason }}
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="asset-actions target-actions">
+
+        <form
+            action="/watchlist/scan/{{ target }}"
+            method="POST"
+        >
+            <button type="submit">
+                Scan Now
+            </button>
+        </form>
+
+        {% if asset.scan_id %}
+
+        <a
+            href="/history/{{ asset.scan_id }}"
+        >
+            Open Latest Snapshot
+        </a>
+
+        <a
+            href="/report/{{ asset.scan_id }}"
+        >
+            Export PDF
+        </a>
+
+        <a
+            href="/evidence/{{ asset.scan_id }}"
+        >
+            Export Evidence
+        </a>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<section class="panel wide">
+
+    <div class="panel-title">
+
+        <span>
+            Local Observation Timeline
+        </span>
+
+        <span>
+            {{ records|length }} snapshot(s)
+        </span>
+
+    </div>
+
+    {% if records %}
+
+    <div class="target-timeline">
+
+        {% for record in records %}
+
+        <a
+            href="/history/{{ record.id }}"
+            class="target-timeline-row"
+        >
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-date">
+                {{ record.data.scanned_at }}
+            </div>
+
+            <div class="timeline-score">
+                Score
+                <strong>
+                    {{ record.data.assessment.score }}
+                </strong>
+            </div>
+
+            <div class="timeline-grade">
+                Grade
+                <strong>
+                    {{ record.data.assessment.grade }}
+                </strong>
+            </div>
+
+            <div class="timeline-expiry">
+                Expires
+                <strong>
+                    {{ record.data.certificate.days_remaining }}d
+                </strong>
+            </div>
+
+            <div class="timeline-arrow">
+                →
+            </div>
+
+        </a>
+
+        {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div class="empty-state">
+        No observations have been recorded
+        for this target.
+    </div>
+
+    {% endif %}
+
+</section>
+
+{% endif %}
+
+</main>
+
+</body>
+</html>

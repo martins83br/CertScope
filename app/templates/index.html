@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CertScope</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<main class="shell">
+
+<header class="hero">
+    <div class="brand">
+        <div class="logo">CS</div>
+        <div>
+            <h1>CertScope</h1>
+            <p>TLS & Certificate Intelligence Platform</p>
+        </div>
+    </div>
+
+    <nav class="top-nav">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/" class="active">Scanner</a>
+        <a href="/history">History</a>
+        <a href="/compare">Compare</a>
+    </nav>
+</header>
+
+<section class="scanner-card">
+    <div class="scanner-copy">
+        <span class="eyebrow">TARGET ANALYSIS</span>
+        <h2>Understand the certificate story.</h2>
+        <p>
+            Inspect certificate identity, trust, cryptography,
+            TLS protocols and HTTPS security posture from one dashboard.
+        </p>
+    </div>
+
+    <form method="POST" action="/scan" class="scan-form">
+        <input
+            type="text"
+            name="target"
+            placeholder="example.com"
+            autocomplete="off"
+            required
+        >
+        <button type="submit">Analyze Target</button>
+    </form>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+</section>
+
+{% if result %}
+
+<section class="results">
+
+<div class="result-header">
+    <div>
+        <span class="eyebrow">SECURITY ASSESSMENT</span>
+        <h2>{{ result.target }}</h2>
+        <p>Scanned {{ result.scanned_at }}</p>
+    </div>
+
+    <div class="actions">
+        <a href="/report/{{ report_id }}" class="button secondary">
+            Export PDF Report
+        </a>
+
+<a
+    href="/evidence/{{ report_id }}"
+    class="export-secondary"
+>
+    Export JSON Evidence
+</a>
+
+    </div>
+</div>
+
+
+{% if historical %}
+<div class="historical-banner">
+    HISTORICAL SNAPSHOT — This is a previously recorded scan.
+</div>
+{% endif %}
+
+{% if result.story %}
+<article class="panel wide story-panel">
+
+    <div class="panel-title">
+        <span>Certificate Story</span>
+
+        <span class="story-level {{ result.story.level|lower }}">
+            {{ result.story.level }}
+        </span>
+    </div>
+
+    <div class="story-content">
+
+        <h3>
+            {{ result.story.headline }}
+        </h3>
+
+        {% for paragraph in result.story.paragraphs %}
+        <p>{{ paragraph }}</p>
+        {% endfor %}
+
+    </div>
+
+</article>
+{% endif %}
+
+
+{% if result.lifecycle and result.lifecycle.available %}
+
+<article class="panel wide lifecycle-panel">
+
+    <div class="panel-title">
+
+        <span>
+            Certificate Lifecycle
+        </span>
+
+        <span>
+            {{ result.lifecycle.days_remaining }}
+            days remaining
+        </span>
+
+    </div>
+
+    <div class="lifecycle-track">
+
+        <div class="lifecycle-labels">
+
+            <div>
+                <span>
+                    ISSUED
+                </span>
+
+                <strong>
+                    {{ result.lifecycle.issued_friendly }}
+                </strong>
+            </div>
+
+            <div class="lifecycle-current">
+                <span>
+                    CURRENT POSITION
+                </span>
+
+                <strong>
+                    {{ result.lifecycle.progress }}%
+                </strong>
+            </div>
+
+            <div>
+                <span>
+                    EXPIRES
+                </span>
+
+                <strong>
+                    {{ result.lifecycle.expires_friendly }}
+                </strong>
+            </div>
+
+        </div>
+
+        <div class="lifecycle-bar">
+
+            <div
+                class="lifecycle-progress"
+                style="width: {{ result.lifecycle.progress }}%"
+            ></div>
+
+            <div
+                class="lifecycle-marker"
+                style="left: {{ result.lifecycle.progress }}%"
+            ></div>
+
+        </div>
+
+    </div>
+
+</article>
+
+{% endif %}
+
+<div class="score-grid">
+
+    <article class="score-card">
+        <span>Overall Score</span>
+        <strong>{{ result.assessment.score }}</strong>
+        <small>/ 100</small>
+    </article>
+
+    <article class="metric-card">
+        <span>Grade</span>
+        <strong>{{ result.assessment.grade }}</strong>
+    </article>
+
+    <article class="metric-card">
+        <span>Expires In</span>
+        <strong>{{ result.certificate.days_remaining }}</strong>
+        <small>days</small>
+    </article>
+
+    <article class="metric-card">
+        <span>Negotiated TLS</span>
+        <strong>{{ result.connection.tls_version }}</strong>
+    </article>
+
+</div>
+
+<div class="dashboard-grid">
+
+<article class="panel">
+    <div class="panel-title">
+        <span>Certificate Validation</span>
+    </div>
+
+    <div class="validation-grid">
+
+        <div class="validation-item">
+            <span>Trust</span>
+            {% if result.validation.trust_valid %}
+            <strong class="pass">PASS</strong>
+            {% else %}
+            <strong class="fail">FAIL</strong>
+            {% endif %}
+        </div>
+
+        <div class="validation-item">
+            <span>Hostname</span>
+            {% if result.validation.hostname_valid %}
+            <strong class="pass">PASS</strong>
+            {% else %}
+            <strong class="fail">FAIL</strong>
+            {% endif %}
+        </div>
+
+    </div>
+</article>
+
+<article class="panel">
+    <div class="panel-title">
+        <span>HTTPS Posture</span>
+    </div>
+
+    <div class="validation-grid">
+
+        <div class="validation-item">
+            <span>HSTS</span>
+            {% if result.http.hsts_enabled %}
+            <strong class="pass">ENABLED</strong>
+            {% else %}
+            <strong class="warn">NOT DETECTED</strong>
+            {% endif %}
+        </div>
+
+        <div class="validation-item">
+            <span>HTTP Status</span>
+            <strong>{{ result.http.status_code or "N/A" }}</strong>
+        </div>
+
+    </div>
+</article>
+
+</div>
+
+<article class="panel wide">
+    <div class="panel-title">
+        <span>TLS Protocol Support</span>
+        <span>Active protocol probes</span>
+    </div>
+
+    <div class="protocol-grid">
+
+    {% for protocol in result.tls_versions %}
+
+        <div class="protocol-card">
+            <span>{{ protocol.name }}</span>
+
+            {% set tls_status = protocol.status if protocol.status is defined else ("SUPPORTED" if protocol.supported else "REJECTED") %}
+
+            {% if tls_status == "SUPPORTED" %}
+                {% if protocol.name in ["TLS 1.0", "TLS 1.1"] %}
+                <strong class="fail">SUPPORTED</strong>
+                {% else %}
+                <strong class="pass">SUPPORTED</strong>
+                {% endif %}
+
+            {% elif tls_status == "REJECTED" %}
+                <strong class="pass">REJECTED</strong>
+
+            {% elif tls_status == "LOCAL_UNSUPPORTED" %}
+                <strong class="warn">LOCAL UNSUPPORTED</strong>
+
+            {% else %}
+                <strong class="warn">INCONCLUSIVE</strong>
+            {% endif %}
+
+            {% if protocol.cipher %}
+            <small>{{ protocol.cipher }}</small>
+            {% endif %}
+        </div>
+
+    {% endfor %}
+
+    </div>
+</article>
+
+<div class="dashboard-grid">
+
+<article class="panel">
+    <div class="panel-title">
+        <span>Certificate Identity</span>
+        <span class="status good">LIVE</span>
+    </div>
+
+    <dl>
+        <div>
+            <dt>Common Name</dt>
+            <dd>{{ result.certificate.subject_common_name or 'Not available' }}</dd>
+        </div>
+
+        <div>
+            <dt>Issuer</dt>
+            <dd>
+                {{ result.certificate.issuer_common_name }}
+                {% if result.certificate.issuer_organization %}
+                <small class="block">
+                    {{ result.certificate.issuer_organization }}
+                </small>
+                {% endif %}
+            </dd>
+        </div>
+
+        <div>
+            <dt>Valid From</dt>
+            <dd>{{ result.certificate.not_before }}</dd>
+        </div>
+
+        <div>
+            <dt>Valid Until</dt>
+            <dd>{{ result.certificate.not_after }}</dd>
+        </div>
+
+        <div>
+            <dt>Public Key</dt>
+            <dd>{{ result.certificate.public_key.description }}</dd>
+        </div>
+
+        <div>
+            <dt>Signature</dt>
+            <dd>{{ result.certificate.signature_algorithm }}</dd>
+        </div>
+    </dl>
+
+</article>
+
+<article class="panel">
+
+    <div class="panel-title">
+        <span>TLS Connection</span>
+        <span class="status good">CONNECTED</span>
+    </div>
+
+    <dl>
+
+        <div>
+            <dt>Protocol</dt>
+            <dd>{{ result.connection.tls_version }}</dd>
+        </div>
+
+        <div>
+            <dt>Cipher</dt>
+            <dd>{{ result.connection.cipher }}</dd>
+        </div>
+
+        <div>
+            <dt>Cipher Bits</dt>
+            <dd>{{ result.connection.cipher_bits }}</dd>
+        </div>
+
+        <div>
+            <dt>Final URL</dt>
+            <dd>{{ result.http.final_url }}</dd>
+        </div>
+
+        <div>
+            <dt>Server Header</dt>
+            <dd>{{ result.http.server or "Not disclosed" }}</dd>
+        </div>
+
+    </dl>
+
+</article>
+
+</div>
+
+<article class="panel wide">
+
+    <div class="panel-title">
+        <span>Security Headers</span>
+    </div>
+
+    <div class="headers-grid">
+
+    {% for header, value in result.http.security_headers.items() %}
+
+        <div class="header-row">
+            <span>{{ header }}</span>
+
+            {% if value %}
+            <strong class="pass">DETECTED</strong>
+            <code>{{ value }}</code>
+            {% else %}
+            <strong class="muted-status">NOT DETECTED</strong>
+            {% endif %}
+        </div>
+
+    {% endfor %}
+
+    </div>
+
+</article>
+
+
+{% if result.comparison %}
+<article class="panel wide">
+
+    <div class="panel-title">
+        <span>Changes Since Previous Scan</span>
+
+        {% if result.comparison.available %}
+            {% if result.comparison.changed %}
+            <span class="change-badge changed">
+                CHANGES DETECTED
+            </span>
+            {% else %}
+            <span class="change-badge stable">
+                STABLE
+            </span>
+            {% endif %}
+        {% else %}
+        <span class="change-badge baseline">
+            BASELINE
+        </span>
+        {% endif %}
+    </div>
+
+    <div class="comparison-summary">
+        {{ result.comparison.summary }}
+    </div>
+
+    {% if result.comparison.changes %}
+
+    <div class="change-list">
+
+        {% for change in result.comparison.changes %}
+
+        <div class="change-row">
+
+            <div class="change-category">
+                {{ change.category }}
+            </div>
+
+            <div class="change-field">
+                <strong>{{ change.field }}</strong>
+            </div>
+
+            <div class="change-before">
+                <span>Before</span>
+                <code>
+                    {{ change.before if change.before is not none else "—" }}
+                </code>
+            </div>
+
+            <div class="change-arrow">
+                →
+            </div>
+
+            <div class="change-after">
+                <span>After</span>
+                <code>
+                    {{ change.after if change.after is not none else "—" }}
+                </code>
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% endif %}
+
+</article>
+{% endif %}
+
+
+{% if result.pki %}
+
+<article class="panel wide pki-panel">
+
+    <div class="panel-title">
+
+        <span>
+            Certificate Chain
+        </span>
+
+        {% if result.pki.chain.available %}
+
+            {% if result.pki.chain.verified %}
+            <span class="chain-status verified">
+                VERIFIED
+            </span>
+            {% else %}
+            <span class="chain-status warning">
+                REVIEW
+            </span>
+            {% endif %}
+
+        {% else %}
+
+        <span class="chain-status warning">
+            UNAVAILABLE
+        </span>
+
+        {% endif %}
+
+    </div>
+
+    {% if result.pki.chain.available %}
+
+    <div class="chain-visual">
+
+        {% for cert in result.pki.chain.certificates %}
+
+        <div class="chain-node">
+
+            <div class="chain-position">
+                {{ cert.role }}
+            </div>
+
+            <div class="chain-icon">
+                {{ loop.index }}
+            </div>
+
+            <div class="chain-info">
+
+                <strong>
+                    {{ cert.subject_cn }}
+                </strong>
+
+                <span>
+                    Issued by {{ cert.issuer_cn }}
+                </span>
+
+                <small>
+                    {{ cert.public_key }}
+                    ·
+                    {{ cert.signature_algorithm }}
+                </small>
+
+                <small>
+                    Valid until
+                    {{ cert.not_after }}
+                </small>
+
+            </div>
+
+        </div>
+
+        {% if not loop.last %}
+        <div class="chain-connector">
+            ↓
+        </div>
+        {% endif %}
+
+        {% endfor %}
+
+        <div class="chain-root-note">
+            <strong>
+                Trust Anchor
+            </strong>
+
+            <span>
+                The root certificate may not be transmitted
+                by the server because trusted roots are
+                normally stored locally by the client.
+            </span>
+        </div>
+
+    </div>
+
+    <div class="chain-details">
+
+        {% for cert in result.pki.chain.certificates %}
+
+        <details>
+
+            <summary>
+                Certificate {{ loop.index }} —
+                {{ cert.subject_cn }}
+            </summary>
+
+            <dl>
+
+                <div>
+                    <dt>Subject</dt>
+                    <dd>{{ cert.subject }}</dd>
+                </div>
+
+                <div>
+                    <dt>Issuer</dt>
+                    <dd>{{ cert.issuer }}</dd>
+                </div>
+
+                <div>
+                    <dt>Serial</dt>
+                    <dd>{{ cert.serial_number }}</dd>
+                </div>
+
+                <div>
+                    <dt>Public Key</dt>
+                    <dd>{{ cert.public_key }}</dd>
+                </div>
+
+                <div>
+                    <dt>Signature</dt>
+                    <dd>
+                        {{ cert.signature_algorithm }}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>SHA-256</dt>
+                    <dd class="mono">
+                        {{ cert.sha256 }}
+                    </dd>
+                </div>
+
+            </dl>
+
+        </details>
+
+        {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div class="intelligence-error">
+        {{ result.pki.chain.error }}
+    </div>
+
+    {% endif %}
+
+</article>
+
+
+<article class="panel wide ct-panel">
+
+    <div class="panel-title">
+
+        <span>
+            Certificate Transparency Intelligence
+        </span>
+
+        {% if result.pki.ct.available %}
+
+        <span class="ct-status">
+            PUBLIC CT DATA
+        </span>
+
+        {% else %}
+
+        <span class="chain-status warning">
+            UNAVAILABLE
+        </span>
+
+        {% endif %}
+
+    </div>
+
+    {% if result.pki.ct.available %}
+
+    <div class="ct-metrics">
+
+        <div class="ct-metric">
+            <span>CT Records</span>
+            <strong>
+                {{ result.pki.ct.record_count }}
+            </strong>
+        </div>
+
+        <div class="ct-metric">
+            <span>Observed Names</span>
+            <strong>
+                {{ result.pki.ct.unique_name_count }}
+            </strong>
+        </div>
+
+        <div class="ct-metric">
+            <span>Historical Issuers</span>
+            <strong>
+                {{ result.pki.ct.issuer_count }}
+            </strong>
+        </div>
+
+        <div class="ct-metric">
+            <span>Records Displayed</span>
+            <strong>
+                {{ result.pki.ct.displayed_count }}
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="ct-section">
+
+        <h3>
+            Names Observed in Certificate Transparency
+        </h3>
+
+        <p class="section-description">
+            These names were publicly observed in
+            certificates associated with this domain.
+            Their presence does not prove that the
+            corresponding host is currently active.
+        </p>
+
+        <div class="ct-names">
+
+            {% for name in result.pki.ct.discovered_names[:40] %}
+
+            <span class="ct-name-entry">
+                {{ name }}
+            </span>
+
+            {% endfor %}
+
+        </div>
+
+        {% if result.pki.ct.unique_name_count > 40 %}
+
+        <p class="ct-more">
+            Showing 40 of
+            {{ result.pki.ct.unique_name_count }}
+            observed names.
+        </p>
+
+        {% endif %}
+
+    </div>
+
+
+    {% if result.ca_timeline %}
+
+    <div class="ct-section">
+
+        <h3>
+            Certificate Authority Timeline
+        </h3>
+
+        <p class="section-description">
+            Certificate authorities observed in
+            the public CT records retrieved for
+            this domain.
+        </p>
+
+        <div class="ca-timeline">
+
+            {% for ca in result.ca_timeline %}
+
+            <div class="ca-event">
+
+                <div class="ca-dot"></div>
+
+                <div class="ca-event-content">
+
+                    <strong>
+                        {{ ca.name }}
+                    </strong>
+
+                    <span>
+                        {{ ca.first_seen_friendly }}
+                        →
+                        {{ ca.last_seen_friendly }}
+                    </span>
+
+                    <small>
+                        {{ ca.count }}
+                        displayed certificate record(s)
+                    </small>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+    <div class="ct-section">
+
+        <h3>
+            Recent Public Certificate Records
+        </h3>
+
+        <div class="ct-table-wrap">
+
+            <table class="ct-table">
+
+                <thead>
+                    <tr>
+                        <th>Common Name</th>
+                        <th>Issuer</th>
+                        <th>Valid From</th>
+                        <th>Valid Until</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for record in result.pki.ct.records[:15] %}
+
+                    <tr>
+
+                        <td>
+                            {{ record.common_name }}
+                        </td>
+
+                        <td>
+                            {{ record.issuer_name }}
+                        </td>
+
+                        <td>
+                            {{ record.not_before }}
+                        </td>
+
+                        <td>
+                            {{ record.not_after }}
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    {% else %}
+
+    <div class="intelligence-error">
+
+        {{ result.pki.ct.error }}
+
+        <br><br>
+
+        The certificate scan itself remains valid.
+        Certificate Transparency is treated as
+        supplemental intelligence.
+
+    </div>
+
+    {% endif %}
+
+</article>
+
+{% endif %}
+
+<article class="panel wide">
+
+    <div class="panel-title">
+        <span>Security Findings</span>
+        <span>{{ result.assessment.findings|length }} finding(s)</span>
+    </div>
+
+    <div class="findings">
+
+    {% for finding in result.assessment.findings %}
+
+        <div class="finding">
+
+            <span class="severity {{ finding.severity|lower }}">
+                {{ finding.severity }}
+            </span>
+
+            <div>
+                <strong>{{ finding.title }}</strong>
+                <p>{{ finding.detail }}</p>
+            </div>
+
+        </div>
+
+    {% endfor %}
+
+    </div>
+
+</article>
+
+<article class="panel wide">
+
+    <div class="panel-title">
+        <span>Recommendations</span>
+        <span>{{ result.assessment.recommendations|length }} action(s)</span>
+    </div>
+
+    <ol class="recommendations">
+
+    {% for recommendation in result.assessment.recommendations %}
+        <li>{{ recommendation }}</li>
+    {% endfor %}
+
+    </ol>
+
+</article>
+
+<article class="panel wide">
+
+    <div class="panel-title">
+        <span>Subject Alternative Names</span>
+        <span>{{ result.certificate.sans|length }} entries</span>
+    </div>
+
+    <div class="chips">
+
+    {% for san in result.certificate.sans %}
+        <span class="san-entry">{{ san }}</span>
+    {% else %}
+        <span>No SAN entries detected</span>
+    {% endfor %}
+
+    </div>
+
+</article>
+
+<article class="panel wide fingerprint">
+
+    <div class="panel-title">
+        <span>Certificate Evidence</span>
+    </div>
+
+    <dl>
+
+        <div>
+            <dt>Serial Number</dt>
+            <dd>{{ result.certificate.serial_number }}</dd>
+        </div>
+
+        <div>
+            <dt>SHA-256 Fingerprint</dt>
+            <dd>{{ result.certificate.sha256_fingerprint or 'Not available' }}</dd>
+        </div>
+
+        <div>
+            <dt>SHA-1 Fingerprint</dt>
+            <dd>{{ result.certificate.sha1_fingerprint or 'Not available' }}</dd>
+        </div>
+
+    </dl>
+
+</article>
+
+</section>
+
+{% endif %}
+
+</main>
+</body>
+</html>

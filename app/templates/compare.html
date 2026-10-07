@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        CertScope Compare
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<main class="shell">
+
+<header class="hero">
+
+    <div class="brand">
+
+        <div class="logo">
+            CS
+        </div>
+
+        <div>
+            <h1>
+                CertScope
+            </h1>
+
+            <p>
+                TLS & Certificate Intelligence Platform
+            </p>
+        </div>
+
+    </div>
+
+    <nav class="top-nav">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/">
+            Scanner
+        </a>
+
+        <a href="/history">
+            History
+        </a>
+
+        <a
+            href="/compare"
+            class="active"
+        >
+            Compare
+        </a>
+    </nav>
+
+</header>
+
+<section class="page-heading">
+
+    <span class="eyebrow">
+        SNAPSHOT INTELLIGENCE
+    </span>
+
+    <h2>
+        Compare Certificate Snapshots
+    </h2>
+
+    <p>
+        Compare two recorded observations and identify
+        certificate, TLS, identity and HTTPS changes.
+    </p>
+
+</section>
+
+<section class="panel wide">
+
+    <form
+        action="/compare"
+        method="GET"
+        class="compare-form"
+    >
+
+        <div>
+            <label for="before">
+                BEFORE SNAPSHOT
+            </label>
+
+            <select
+                name="before"
+                id="before"
+                required
+            >
+
+                <option value="">
+                    Select snapshot
+                </option>
+
+                {% for record in records %}
+
+                <option
+                    value="{{ record.id }}"
+                    {% if before_id == record.id %}
+                    selected
+                    {% endif %}
+                >
+                    {{ record.data.target }}
+                    —
+                    {{ record.data.scanned_at }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+        </div>
+
+        <div>
+            <label for="after">
+                AFTER SNAPSHOT
+            </label>
+
+            <select
+                name="after"
+                id="after"
+                required
+            >
+
+                <option value="">
+                    Select snapshot
+                </option>
+
+                {% for record in records %}
+
+                <option
+                    value="{{ record.id }}"
+                    {% if after_id == record.id %}
+                    selected
+                    {% endif %}
+                >
+                    {{ record.data.target }}
+                    —
+                    {{ record.data.scanned_at }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+        </div>
+
+        <button type="submit">
+            Compare
+        </button>
+
+    </form>
+
+</section>
+
+{% if comparison %}
+
+<section class="results">
+
+<div class="compare-summary-grid">
+
+    <article class="metric-card">
+
+        <span>
+            Changes Detected
+        </span>
+
+        <strong>
+            {{ comparison.changed_count }}
+        </strong>
+
+    </article>
+
+    <article class="metric-card">
+
+        <span>
+            Score Before
+        </span>
+
+        <strong>
+            {{ before.assessment.score }}
+        </strong>
+
+    </article>
+
+    <article class="metric-card">
+
+        <span>
+            Score After
+        </span>
+
+        <strong>
+            {{ after.assessment.score }}
+        </strong>
+
+    </article>
+
+    <article class="metric-card">
+
+        <span>
+            Score Evolution
+        </span>
+
+        <strong
+            class="
+            {% if comparison.score_delta and comparison.score_delta > 0 %}
+            pass
+            {% elif comparison.score_delta and comparison.score_delta < 0 %}
+            fail
+            {% endif %}
+            "
+        >
+            {% if comparison.score_delta is not none %}
+                {% if comparison.score_delta > 0 %}
+                +
+                {% endif %}
+                {{ comparison.score_delta }}
+            {% else %}
+                N/A
+            {% endif %}
+        </strong>
+
+    </article>
+
+</div>
+
+<article class="panel wide">
+
+    <div class="panel-title">
+
+        <span>
+            Snapshot Comparison
+        </span>
+
+        {% if comparison.changed_count %}
+        <span class="change-badge changed">
+            CHANGES DETECTED
+        </span>
+        {% else %}
+        <span class="change-badge stable">
+            NO MATERIAL CHANGE
+        </span>
+        {% endif %}
+
+    </div>
+
+    <div class="compare-table-wrap">
+
+        <table class="compare-table">
+
+            <thead>
+                <tr>
+                    <th>
+                        Category
+                    </th>
+
+                    <th>
+                        Property
+                    </th>
+
+                    <th>
+                        Before
+                    </th>
+
+                    <th>
+                        After
+                    </th>
+
+                    <th>
+                        Status
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            {% for row in comparison.rows %}
+
+                <tr
+                    class="
+                    {% if row.changed %}
+                    row-changed
+                    {% endif %}
+                    "
+                >
+
+                    <td>
+                        {{ row.category }}
+                    </td>
+
+                    <td>
+                        {{ row.field }}
+                    </td>
+
+                    <td class="mono">
+                        {{ row.before }}
+                    </td>
+
+                    <td class="mono">
+                        {{ row.after }}
+                    </td>
+
+                    <td>
+                        {% if row.changed %}
+                        <span class="compare-changed">
+                            CHANGED
+                        </span>
+                        {% else %}
+                        <span class="compare-stable">
+                            SAME
+                        </span>
+                        {% endif %}
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</article>
+
+
+<article class="panel wide">
+
+    <div class="panel-title">
+        <span>
+            Identity Changes
+        </span>
+    </div>
+
+    <div class="identity-diff">
+
+        <div>
+
+            <h3>
+                Added SANs
+            </h3>
+
+            {% if comparison.added_sans %}
+
+            <div class="chips">
+
+                {% for san in comparison.added_sans %}
+                <span>
+                    + {{ san }}
+                </span>
+                {% endfor %}
+
+            </div>
+
+            {% else %}
+
+            <p class="diff-empty">
+                No SANs added.
+            </p>
+
+            {% endif %}
+
+        </div>
+
+        <div>
+
+            <h3>
+                Removed SANs
+            </h3>
+
+            {% if comparison.removed_sans %}
+
+            <div class="chips">
+
+                {% for san in comparison.removed_sans %}
+                <span>
+                    - {{ san }}
+                </span>
+                {% endfor %}
+
+            </div>
+
+            {% else %}
+
+            <p class="diff-empty">
+                No SANs removed.
+            </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</article>
+
+
+{% if comparison.header_changes %}
+
+<article class="panel wide">
+
+    <div class="panel-title">
+        <span>
+            Security Header Changes
+        </span>
+    </div>
+
+    <div class="change-list">
+
+        {% for change in comparison.header_changes %}
+
+        <div class="change-row">
+
+            <div class="change-category">
+                HTTPS
+            </div>
+
+            <div class="change-field">
+                <strong>
+                    {{ change.header }}
+                </strong>
+            </div>
+
+            <div class="change-before">
+                <span>
+                    Before
+                </span>
+
+                <code>
+                    {{ change.before or "Not detected" }}
+                </code>
+            </div>
+
+            <div class="change-arrow">
+                →
+            </div>
+
+            <div class="change-after">
+                <span>
+                    After
+                </span>
+
+                <code>
+                    {{ change.after or "Not detected" }}
+                </code>
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</article>
+
+{% endif %}
+
+</section>
+
+{% endif %}
+
+</main>
+
+</body>
+</html>

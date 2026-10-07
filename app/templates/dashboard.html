@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        CertScope Dashboard
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<main class="shell">
+
+<header class="hero">
+
+    <div class="brand">
+
+        <div class="logo">
+            CS
+        </div>
+
+        <div>
+            <h1>
+                CertScope
+            </h1>
+
+            <p>
+                TLS & Certificate Intelligence Platform
+            </p>
+        </div>
+
+    </div>
+
+    <nav class="top-nav">
+
+        <a
+            href="/dashboard"
+            class="active"
+        >
+            Dashboard
+        </a>
+
+        <a href="/">
+            Scanner
+        </a>
+
+        <a href="/history">
+            History
+        </a>
+
+        <a href="/compare">
+            Compare
+        </a>
+
+    </nav>
+
+</header>
+
+
+<section class="page-heading">
+
+    <span class="eyebrow">
+        CERTIFICATE MONITORING & INTELLIGENCE
+    </span>
+
+    <h2>
+        TLS Asset Dashboard
+    </h2>
+
+    <p>
+        Monitor certificate health,
+        expiration, score and recent
+        changes across your tracked targets.
+    </p>
+
+</section>
+
+
+{% if message %}
+
+<div class="dashboard-message">
+    {{ message }}
+</div>
+
+{% endif %}
+
+
+<section class="dashboard-metrics">
+
+    <article class="dashboard-metric">
+
+        <span>
+            Total Assets
+        </span>
+
+        <strong>
+            {{ dashboard.counts.TOTAL }}
+        </strong>
+
+    </article>
+
+    <article class="dashboard-metric healthy">
+
+        <span>
+            Healthy
+        </span>
+
+        <strong>
+            {{ dashboard.counts.HEALTHY }}
+        </strong>
+
+    </article>
+
+    <article class="dashboard-metric attention">
+
+        <span>
+            Attention
+        </span>
+
+        <strong>
+            {{ dashboard.counts.ATTENTION }}
+        </strong>
+
+    </article>
+
+    <article class="dashboard-metric critical">
+
+        <span>
+            Critical
+        </span>
+
+        <strong>
+            {{ dashboard.counts.CRITICAL }}
+        </strong>
+
+    </article>
+
+    <article class="dashboard-metric">
+
+        <span>
+            Unscanned
+        </span>
+
+        <strong>
+            {{ dashboard.counts.UNSCANNED }}
+        </strong>
+
+    </article>
+
+</section>
+
+
+<section class="dashboard-toolbar panel wide">
+
+    <form
+        action="/watchlist/add"
+        method="POST"
+        class="watchlist-add"
+    >
+
+        <input
+            type="text"
+            name="target"
+            placeholder="example.com"
+            required
+        >
+
+        <button type="submit">
+            Add Target
+        </button>
+
+    </form>
+
+    <form
+        action="/watchlist/scan-all"
+        method="POST"
+    >
+
+        <button
+            type="submit"
+            class="scan-all-button"
+        >
+            Scan All
+        </button>
+
+    </form>
+
+</section>
+
+
+<section class="panel wide">
+
+    <div class="asset-table-header">
+
+        <div>
+            <span class="eyebrow">
+                WATCHLIST
+            </span>
+
+            <h3>
+                TLS Assets
+            </h3>
+        </div>
+
+        <div class="asset-search">
+
+            <input
+                id="assetSearch"
+                type="search"
+                placeholder="Filter assets..."
+                autocomplete="off"
+            >
+
+        </div>
+
+    </div>
+
+
+    {% if dashboard.assets %}
+
+    <div class="asset-grid">
+
+        {% for asset in dashboard.assets %}
+
+        <article
+            class="asset-card"
+            data-target="{{ asset.target|lower }}"
+            data-status="{{ asset.status.name|lower }}"
+        >
+
+            <div class="asset-card-top">
+
+                <div>
+
+                    <a
+                        href="/target/{{ asset.target }}"
+                        class="asset-name"
+                    >
+                        {{ asset.target }}
+                    </a>
+
+                    <span
+                        class="asset-status
+                        status-{{ asset.status.name|lower }}"
+                    >
+                        {{ asset.status.label }}
+                    </span>
+
+                    <span
+                        class="asset-source {% if asset.watched %}source-watched{% else %}source-historical{% endif %}"
+                    >
+                        {% if asset.watched %}
+                            Watched
+                        {% else %}
+                            Historical
+                        {% endif %}
+                    </span>
+
+                </div>
+
+                {% if asset.watched %}
+                <form
+                    action="/watchlist/remove"
+                    method="POST"
+                >
+
+                    <input
+                        type="hidden"
+                        name="target"
+                        value="{{ asset.target }}"
+                    >
+
+                    <button
+                        type="submit"
+                        class="remove-target"
+                        title="Remove from watchlist"
+                    >
+                        ×
+                    </button>
+
+                </form>
+                {% endif %}
+
+            </div>
+
+
+            <div class="asset-kpis">
+
+                <div>
+                    <span>
+                        Score
+                    </span>
+
+                    <strong>
+                        {{ asset.score if asset.score is not none else "—" }}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>
+                        Grade
+                    </span>
+
+                    <strong>
+                        {{ asset.grade or "—" }}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>
+                        Expires
+                    </span>
+
+                    <strong>
+                        {% if asset.days_remaining is not none %}
+                            {{ asset.days_remaining }}d
+                        {% else %}
+                            —
+                        {% endif %}
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <div class="asset-detail">
+
+                <div>
+                    <span>
+                        Issuer
+                    </span>
+
+                    <strong>
+                        {{ asset.issuer or "Not scanned" }}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>
+                        Latest Change
+                    </span>
+
+                    <strong>
+                        {{ asset.change_summary }}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>
+                        Last Scan
+                    </span>
+
+                    <strong>
+                        {{ asset.scanned_at or "Never" }}
+                    </strong>
+                </div>
+
+            </div>
+
+
+            {% if asset.rotation_detected %}
+
+            <div class="rotation-alert">
+                Certificate rotation detected
+            </div>
+
+            {% endif %}
+
+
+            <div class="asset-reason">
+                {{ asset.status.reason }}
+            </div>
+
+
+            <div class="asset-actions">
+
+                {% if asset.watched %}
+                <form
+                    action="/watchlist/scan/{{ asset.target }}"
+                    method="POST"
+                >
+                    <button type="submit">
+                        Scan Now
+                    </button>
+                </form>
+                {% else %}
+                <form
+                    action="/watchlist/add"
+                    method="POST"
+                >
+                    <input
+                        type="hidden"
+                        name="target"
+                        value="{{ asset.target }}"
+                    >
+
+                    <button type="submit">
+                        Add to Watchlist
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if asset.scan_id %}
+
+                <a
+                    href="/target/{{ asset.target }}"
+                >
+                    Intelligence
+                </a>
+
+                <a
+                    href="/history/{{ asset.scan_id }}"
+                >
+                    Snapshot
+                </a>
+
+                {% endif %}
+
+            </div>
+
+        </article>
+
+        {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div class="empty-state">
+        Add a target to begin monitoring
+        certificate health and changes.
+    </div>
+
+    {% endif %}
+
+
+</section>
+
+
+<section class="panel wide event-feed-panel">
+
+    <div class="asset-table-header">
+
+        <div>
+
+            <span class="eyebrow">
+                RISK INTELLIGENCE
+            </span>
+
+            <h3>
+                Recent Security Events
+            </h3>
+
+        </div>
+
+        <div class="event-counts">
+
+            <span class="event-count event-critical">
+                {{ event_counts.CRITICAL }}
+                Critical
+            </span>
+
+            <span class="event-count event-high">
+                {{ event_counts.HIGH }}
+                High
+            </span>
+
+            <span class="event-count event-medium">
+                {{ event_counts.MEDIUM }}
+                Medium
+            </span>
+
+            <span class="event-count event-low">
+                {{ event_counts.LOW }}
+                Low
+            </span>
+
+        </div>
+
+    </div>
+
+
+    {% if event_feed %}
+
+    <div class="event-feed">
+
+        {% for event in event_feed %}
+
+        <a
+            href="/history/{{ event.scan_id }}"
+            class="event-row"
+        >
+
+            <div
+                class="event-severity
+                severity-{{ event.severity|lower }}"
+            >
+                {{ event.severity }}
+            </div>
+
+            <div class="event-main">
+
+                <div class="event-heading">
+
+                    <strong>
+                        {{ event.title }}
+                    </strong>
+
+                    <span>
+                        {{ event.target }}
+                    </span>
+
+                </div>
+
+                <p>
+                    {{ event.detail }}
+                </p>
+
+            </div>
+
+            <div class="event-time">
+                {{ event.scanned_at }}
+            </div>
+
+            <div class="event-open">
+                →
+            </div>
+
+        </a>
+
+        {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div class="empty-state">
+        No risk intelligence events have
+        been recorded yet. Run a new scan
+        to establish event-aware snapshots.
+    </div>
+
+    {% endif %}
+
+</section>
+
+</main>
+
+
+<script>
+const search = document.getElementById("assetSearch");
+
+if (search) {
+    search.addEventListener("input", () => {
+        const query = search.value
+            .trim()
+            .toLowerCase();
+
+        document
+            .querySelectorAll(".asset-card")
+            .forEach((card) => {
+                const target =
+                    card.dataset.target || "";
+
+                const status =
+                    card.dataset.status || "";
+
+                card.style.display =
+                    target.includes(query) ||
+                    status.includes(query)
+                        ? ""
+                        : "none";
+            });
+    });
+}
+</script>
+
+</body>
+</html>
